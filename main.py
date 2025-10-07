@@ -3,11 +3,11 @@ import mediapipe as mp
 
 # Initialize hands module
 mp_hands = mp.solutions.hands
-hands = mp_hands.Hands(max_num_hands=2)
+hands = mp_hands.Hands(min_detection_confidence=0.8, max_num_hands=2)
 
 # Initialize face module
-mp_face = mp.solutions.face_detection
-face_detection = mp_face.FaceDetection(min_detection_confidence=0.8)
+mp_face_mesh = mp.solutions.face_mesh
+face_mesh = mp_face_mesh.FaceMesh(min_detection_confidence=0.8, max_num_faces=1)
 
 # Initialize MediaPipe drawing module
 mp_drawing = mp.solutions.drawing_utils
@@ -27,7 +27,7 @@ while cam.isOpened():
 
     # Process the frame to detect hands and face
     hand_results = hands.process(frame_rgb)
-    face_results = face_detection.process(frame_rgb)
+    face_results = face_mesh.process(frame_rgb)
 
     # --------------------HANDS----------------------------------------
     # Check if hands are detected
@@ -38,9 +38,12 @@ while cam.isOpened():
 
     # --------------------FACE--------------------------------------------
     # Check if face are detected
-    if face_results.detections:
-        for face in face_results.detections:
-            mp_drawing.draw_detection(frame, face)
+    if face_results.multi_face_landmarks:
+        for face_landmarks in face_results.multi_face_landmarks:
+            mp_drawing.draw_landmarks(
+            frame, face_landmarks, mp_face_mesh.FACEMESH_TESSELATION,
+             mp_drawing.DrawingSpec(color=(0,255,0), thickness=1, circle_radius=1),
+            mp_drawing.DrawingSpec(color=(0,0,255), thickness=1))
 
     # Display the frame with hand + face landmarks
     cv2.imshow('Hand + Face Recognizations', frame)
