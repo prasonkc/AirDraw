@@ -1,6 +1,9 @@
 import cv2
 import mediapipe as mp
 
+# Functions import
+from HandFunctions.count_fingers import count_fingers
+
 # Initialize hands module
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(min_detection_confidence=0.8, max_num_hands=2)
@@ -22,6 +25,9 @@ while cam.isOpened():
     if not ret:
         continue
 
+    # Flip the frame to avoid mirror effect
+    frame = cv2.flip(frame, 1)
+
     # Convert the frame to RGB format
     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
@@ -32,9 +38,14 @@ while cam.isOpened():
     # --------------------HANDS----------------------------------------
     # Check if hands are detected
     if hand_results.multi_hand_landmarks:
-        for hand_landmarks in hand_results.multi_hand_landmarks:
+        for hand_landmarks, hand_handedness in zip(hand_results.multi_hand_landmarks, hand_results.multi_handedness):
             # Draw landmarks on the frame
             mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+
+            # Either left or right
+            hand_label = hand_handedness.classification[0].label
+            num_fingers_up = count_fingers(hand_landmarks, hand_handedness)
+            print(f"{hand_label} hand: {num_fingers_up} fingers up")
 
     # --------------------FACE--------------------------------------------
     # Check if face are detected
@@ -42,7 +53,7 @@ while cam.isOpened():
         for face_landmarks in face_results.multi_face_landmarks:
             mp_drawing.draw_landmarks(
             frame, face_landmarks, mp_face_mesh.FACEMESH_TESSELATION,
-             mp_drawing.DrawingSpec(color=(0,255,0), thickness=1, circle_radius=1),
+            mp_drawing.DrawingSpec(color=(0,255,0), thickness=1, circle_radius=1),
             mp_drawing.DrawingSpec(color=(0,0,255), thickness=1))
 
     # Display the frame with hand + face landmarks
