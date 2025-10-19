@@ -49,25 +49,26 @@ while cam.isOpened():
     # --------------------HANDS----------------------------------------
     # Check if hands are detected
     if hand_results.multi_hand_landmarks:
-        # for hand_landmarks, hand_handedness in zip(hand_results.multi_hand_landmarks, hand_results.multi_handedness):
-        #     # Draw landmarks on the frame
-        #     mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+        hand_landmarks = hand_results.multi_hand_landmarks[0]
+        hand_handedness = hand_results.multi_handedness[0]
 
-        #     num_fingers_up = count_fingers(hand_landmarks, hand_handedness)
-        #     print(f"hand: {num_fingers_up} fingers up")
+        num_fingers_up = count_fingers(hand_landmarks, hand_handedness)
 
-            hand_landmarks = hand_results.multi_hand_landmarks[0]
+        # Get index fingertip
+        h, w, _ = frame.shape
+        index_tip = hand_landmarks.landmark[8]
+        x, y = int(index_tip.x * w), int(index_tip.y * h)
 
-            # Get index fingertip coordinates
-            h, w, _ = frame.shape
-            index_tip = hand_landmarks.landmark[8]
-            x, y = int(index_tip.x * w), int(index_tip.y * h)
+        # Draw line
+        if prev_point is not None:
+            cv2.line(canvas, prev_point, (x, y), brush_color, brush_size)
+        prev_point = (x, y)
 
-            # Draw line from previous point to current point
-            if prev_point is not None:
-                cv2.line(canvas, prev_point, (x, y), brush_color, brush_size)
+        # Erase if fist
+        if num_fingers_up == 4:
+            canvas = np.zeros_like(frame)
 
-            prev_point = (x, y)
+
 
     # --------------------FACE--------------------------------------------
     # Check if face are detected
@@ -82,7 +83,7 @@ while cam.isOpened():
     frame = cv2.add(frame, canvas)
 
     # Display the frame with hand + face landmarks
-    cv2.imshow('Hand + Face Recognizations', frame)
+    cv2.imshow('Hand + Face Recognizations', canvas)
 
     # Exit when 'q' is pressed
     if cv2.waitKey(1) & 0xFF == ord('q'):
