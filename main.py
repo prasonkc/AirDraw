@@ -22,8 +22,11 @@ cam = cv2.VideoCapture(0)
 # Create a canvas for drawing
 canvas = None
 prev_point = None
-brush_color = (0, 0, 255)  # Red
+brush_color = (0, 0, 255)
 brush_size = 5
+
+# Track the state of drawing 
+allow_draw = True
 
 while cam.isOpened():
     ret, frame = cam.read() # Ret = return value that detects whether frame was successfully read or not
@@ -59,8 +62,14 @@ while cam.isOpened():
         index_tip = hand_landmarks.landmark[8]
         x, y = int(index_tip.x * w), int(index_tip.y * h)
 
+        # toggle drawing with fist
+        if num_fingers_up == 0:
+            allow_draw = False
+        else:
+            allow_draw = True
+
         # Draw line
-        if prev_point is not None:
+        if prev_point is not None and allow_draw:
             cv2.line(canvas, prev_point, (x, y), brush_color, brush_size)
         prev_point = (x, y)
 
