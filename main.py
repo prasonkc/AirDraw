@@ -6,7 +6,7 @@ from HandFunctions.count_fingers import count_fingers
 
 # Initialize hands module
 mp_hands = mp.solutions.hands
-hands = mp_hands.Hands(min_detection_confidence=0.8, max_num_hands=2)
+hands = mp_hands.Hands(min_detection_confidence=0.8, max_num_hands=1)
 
 # Initialize face module
 mp_face_mesh = mp.solutions.face_mesh
@@ -17,6 +17,10 @@ mp_drawing = mp.solutions.drawing_utils
 
 # Open a video capture object (0 for the default camera)
 cam = cv2.VideoCapture(0)
+
+# Colors
+current_color = (0, 0, 255)  # Red
+brush_size = 5
 
 while cam.isOpened():
     ret, frame = cam.read() # Ret = return value that detects whether frame was successfully read or not
@@ -38,14 +42,23 @@ while cam.isOpened():
     # --------------------HANDS----------------------------------------
     # Check if hands are detected
     if hand_results.multi_hand_landmarks:
-        for hand_landmarks, hand_handedness in zip(hand_results.multi_hand_landmarks, hand_results.multi_handedness):
-            # Draw landmarks on the frame
-            mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+        # for hand_landmarks, hand_handedness in zip(hand_results.multi_hand_landmarks, hand_results.multi_handedness):
+        #     # Draw landmarks on the frame
+        #     mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
-            # Either left or right
-            hand_label = hand_handedness.classification[0].label
-            num_fingers_up = count_fingers(hand_landmarks, hand_handedness)
-            print(f"{hand_label} hand: {num_fingers_up} fingers up")
+        #     num_fingers_up = count_fingers(hand_landmarks, hand_handedness)
+        #     print(f"hand: {num_fingers_up} fingers up")
+
+            hand_landmarks = hand_results.multi_hand_landmarks[0]
+
+            # Get index finger tip
+            h, w, _ = frame.shape
+            index_finger = hand_landmarks.landmark[8]
+
+            # get the coordinates of the tip
+            x, y = int(index_finger.x * w), int(index_finger.y * h)
+            # draw around the tip
+            cv2.circle(frame, (x, y), brush_size, current_color, -1)
 
     # --------------------FACE--------------------------------------------
     # Check if face are detected

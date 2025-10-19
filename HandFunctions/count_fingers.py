@@ -8,6 +8,9 @@ def count_fingers(hand_landmarks, hand_label):
     finger_tips = [4,8,12,16,20]
     finger_pips = [2,6,10,14,18]
 
+    # Only track the index finger
+    finger_tip = 8
+
     fingers=[]
 
 # Logic1: When opening a fist, thumbs move sideways so we compare x coordinates. Other fingers move up and down so we compare y coordinates
@@ -23,8 +26,8 @@ def count_fingers(hand_landmarks, hand_label):
 
 
 # Check for other fingers
-    for tip, pip in zip(finger_tips[1:], finger_pips[1:]):
-        fingers.append(1 if hand_landmarks.landmark[tip].y < hand_landmarks.landmark[pip].y else 0)
+    # for tip, pip in zip(finger_tips[1:], finger_pips[1:]):
+    #     fingers.append(1 if hand_landmarks.landmark[tip].y < hand_landmarks.landmark[pip].y else 0)
 
 
     # Return sum of the fingers to find out how many fingers are raised
