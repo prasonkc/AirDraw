@@ -1,5 +1,6 @@
 import cv2
 import mediapipe as mp
+import numpy as np
 
 # Functions import
 from HandFunctions.count_fingers import count_fingers
@@ -18,8 +19,10 @@ mp_drawing = mp.solutions.drawing_utils
 # Open a video capture object (0 for the default camera)
 cam = cv2.VideoCapture(0)
 
-# Colors
-current_color = (0, 0, 255)  # Red
+# Create a canvas for drawing
+canvas = None
+prev_point = None
+brush_color = (0, 0, 255)  # Red
 brush_size = 5
 
 while cam.isOpened():
@@ -34,6 +37,10 @@ while cam.isOpened():
 
     # Convert the frame to RGB format
     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    # Draw the canvas, the same size of frame
+    if canvas is None:
+        canvas = np.zeros_like(frame)
 
     # Process the frame to detect hands and face
     hand_results = hands.process(frame_rgb)
@@ -51,23 +58,28 @@ while cam.isOpened():
 
             hand_landmarks = hand_results.multi_hand_landmarks[0]
 
-            # Get index finger tip
+            # Get index fingertip coordinates
             h, w, _ = frame.shape
-            index_finger = hand_landmarks.landmark[8]
+            index_tip = hand_landmarks.landmark[8]
+            x, y = int(index_tip.x * w), int(index_tip.y * h)
 
-            # get the coordinates of the tip
-            x, y = int(index_finger.x * w), int(index_finger.y * h)
-            # draw around the tip
-            cv2.circle(frame, (x, y), brush_size, current_color, -1)
+            # Draw line from previous point to current point
+            if prev_point is not None:
+                cv2.line(canvas, prev_point, (x, y), brush_color, brush_size)
+
+            prev_point = (x, y)
 
     # --------------------FACE--------------------------------------------
     # Check if face are detected
-    if face_results.multi_face_landmarks:
-        for face_landmarks in face_results.multi_face_landmarks:
-            mp_drawing.draw_landmarks(
-            frame, face_landmarks, mp_face_mesh.FACEMESH_TESSELATION,
-            mp_drawing.DrawingSpec(color=(0,255,0), thickness=1, circle_radius=1),
-            mp_drawing.DrawingSpec(color=(0,0,255), thickness=1))
+    # if face_results.multi_face_landmarks:
+    #     for face_landmarks in face_results.multi_face_landmarks:
+    #         mp_drawing.draw_landmarks(
+    #         frame, face_landmarks, mp_face_mesh.FACEMESH_TESSELATION,
+    #         mp_drawing.DrawingSpec(color=(0,255,0), thickness=1, circle_radius=1),
+    #         mp_drawing.DrawingSpec(color=(0,0,255), thickness=1))
+
+    # Overlay canvas on frame
+    frame = cv2.add(frame, canvas)
 
     # Display the frame with hand + face landmarks
     cv2.imshow('Hand + Face Recognizations', frame)
