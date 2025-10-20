@@ -76,14 +76,21 @@ while cam.isOpened():
         index_tip = hand_landmarks.landmark[8]
         x, y = int(index_tip.x * w), int(index_tip.y * h)
 
-        # Fist → pause drawing
+        prev_x, prev_y = 0, 0
+        smooth_factor = 2
+
+        # Smoothing the coordinates
+        smooth_x = int(prev_x + (x - prev_x) / smooth_factor)
+        smooth_y = int(prev_y + (y - prev_y) / smooth_factor)
+
+        # Fist = pause drawing
         allow_draw = num_fingers_up != 0
 
-        # Erase → 4 fingers
+        # Erase = 4 fingers
         if num_fingers_up == 4:
             canvas = np.zeros_like(frame)
 
-        # Color cycling (2/3 fingers) with cooldown
+        # Color cycling
         current_time = time.time()
         if num_fingers_up == 3 and current_time - last_color_change > 0.5:
             color_flag = (color_flag + 1) % len(colors)
@@ -96,8 +103,11 @@ while cam.isOpened():
 
         # Drawing
         if prev_point is not None and allow_draw:
-            cv2.line(canvas, prev_point, (x, y), brush_color, brush_size)
-        prev_point = (x, y)
+            cv2.line(canvas, prev_point, (smooth_x, smooth_y), brush_color, brush_size)
+        
+        
+        prev_point = (smooth_x, smooth_y)
+        prev_x, prev_y = smooth_x, smooth_y
 
     # --------------------FACE--------------------------------------------
     # Check if face are detected
