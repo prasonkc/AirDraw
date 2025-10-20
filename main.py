@@ -1,6 +1,7 @@
 import cv2
 import mediapipe as mp
 import numpy as np
+import time
 
 # Functions import
 from HandFunctions.count_fingers import count_fingers
@@ -22,8 +23,23 @@ cam = cv2.VideoCapture(0)
 # Create a canvas for drawing
 canvas = None
 prev_point = None
-brush_color = (0, 0, 255)
+colors = [
+    (231, 76, 60),
+    (46, 204, 113),
+    (52, 152, 219),
+    (155, 89, 182),
+    (241, 196, 15),
+    (230, 126, 34),
+    (26, 188, 156), 
+    (149, 165, 166), 
+    (236, 240, 241),
+    (44, 62, 80)      
+]
 brush_size = 5
+color_flag = 0
+brush_color = colors[color_flag]
+last_color_change = 0
+
 
 # Track the state of drawing 
 allow_draw = True
@@ -54,30 +70,34 @@ while cam.isOpened():
     if hand_results.multi_hand_landmarks:
         hand_landmarks = hand_results.multi_hand_landmarks[0]
         hand_handedness = hand_results.multi_handedness[0]
-
         num_fingers_up = count_fingers(hand_landmarks, hand_handedness)
 
-        # Get index fingertip
         h, w, _ = frame.shape
         index_tip = hand_landmarks.landmark[8]
         x, y = int(index_tip.x * w), int(index_tip.y * h)
 
-        # toggle drawing with fist
-        if num_fingers_up == 0:
-            allow_draw = False
-        else:
-            allow_draw = True
+        # Fist → pause drawing
+        allow_draw = num_fingers_up != 0
 
-        # Draw line
-        if prev_point is not None and allow_draw:
-            cv2.line(canvas, prev_point, (x, y), brush_color, brush_size)
-        prev_point = (x, y)
-
-        # Erase if fist
+        # Erase → 4 fingers
         if num_fingers_up == 4:
             canvas = np.zeros_like(frame)
 
+        # Color cycling (2/3 fingers) with cooldown
+        current_time = time.time()
+        if num_fingers_up == 3 and current_time - last_color_change > 0.5:
+            color_flag = (color_flag + 1) % len(colors)
+            brush_color = colors[color_flag]
+            last_color_change = current_time
+        elif num_fingers_up == 2 and current_time - last_color_change > 0.5:
+            color_flag = (color_flag - 1) % len(colors)
+            brush_color = colors[color_flag]
+            last_color_change = current_time
 
+        # Drawing
+        if prev_point is not None and allow_draw:
+            cv2.line(canvas, prev_point, (x, y), brush_color, brush_size)
+        prev_point = (x, y)
 
     # --------------------FACE--------------------------------------------
     # Check if face are detected
