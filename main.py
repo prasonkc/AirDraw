@@ -10,9 +10,9 @@ from HandFunctions.count_fingers import count_fingers
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(min_detection_confidence=0.8, max_num_hands=1)
 
-# Initialize face module
-mp_face_mesh = mp.solutions.face_mesh
-face_mesh = mp_face_mesh.FaceMesh(min_detection_confidence=0.8, max_num_faces=1)
+# # Initialize face module
+# mp_face_mesh = mp.solutions.face_mesh
+# face_mesh = mp_face_mesh.FaceMesh(min_detection_confidence=0.8, max_num_faces=1)
 
 # Initialize MediaPipe drawing module
 mp_drawing = mp.solutions.drawing_utils
@@ -63,7 +63,7 @@ while cam.isOpened():
 
     # Process the frame to detect hands and face
     hand_results = hands.process(frame_rgb)
-    face_results = face_mesh.process(frame_rgb)
+    # face_results = face_mesh.process(frame_rgb)
 
     # --------------------HANDS----------------------------------------
     # Check if hands are detected
@@ -87,19 +87,19 @@ while cam.isOpened():
         smooth_y = int(prev_y + (y - prev_y) / smooth_factor)
 
         # Fist = pause drawing
-        allow_draw = num_fingers_up != 0
+        allow_draw = num_fingers_up != 1
 
         # Erase = 4 fingers
-        if num_fingers_up == 4:
+        if num_fingers_up == 5:
             canvas = np.zeros_like(frame)
 
         # Color cycling
         current_time = time.time()
-        if num_fingers_up == 3 and current_time - last_color_change > 0.5:
+        if num_fingers_up == 4 and current_time - last_color_change > 0.5:
             color_flag = (color_flag + 1) % len(colors)
             brush_color = colors[color_flag]
             last_color_change = current_time
-        elif num_fingers_up == 2 and current_time - last_color_change > 0.5:
+        elif num_fingers_up == 3 and current_time - last_color_change > 0.5:
             color_flag = (color_flag - 1) % len(colors)
             brush_color = colors[color_flag]
             last_color_change = current_time

@@ -17,10 +17,10 @@ def count_fingers(hand_landmarks, hand_label):
 # Check for thumb
 
     # Thumbs move in opposite x direction in each hand so we check whether its right hand or left hand 
-    # if hand_label == "Right":
-    #     fingers.append(1 if hand_landmarks.landmark[4].x < hand_landmarks.landmark[2].x else 0) # Thumb landmarks = 2 for pip and 4 for tip
-    # else:
-    #     fingers.append(1 if hand_landmarks.landmark[4].x < hand_landmarks.landmark[2].x else 0)
+    if hand_label == "Right":
+        fingers.append(1 if hand_landmarks.landmark[4].x < hand_landmarks.landmark[2].x else 0) # Thumb landmarks = 2 for pip and 4 for tip
+    else:
+        fingers.append(1 if hand_landmarks.landmark[4].x < hand_landmarks.landmark[2].x else 0)
 
 
 # Check for other fingers
