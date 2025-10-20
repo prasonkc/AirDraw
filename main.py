@@ -10,10 +10,6 @@ from HandFunctions.count_fingers import count_fingers
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(min_detection_confidence=0.8, max_num_hands=1)
 
-# # Initialize face module
-# mp_face_mesh = mp.solutions.face_mesh
-# face_mesh = mp_face_mesh.FaceMesh(min_detection_confidence=0.8, max_num_faces=1)
-
 # Initialize MediaPipe drawing module
 mp_drawing = mp.solutions.drawing_utils
 
@@ -23,6 +19,11 @@ cam = cv2.VideoCapture(0)
 # Create a canvas for drawing
 canvas = None
 prev_point = None
+
+# Persist previous raw coordinates for smoothing across frames
+prev_x = None
+prev_y = None
+
 colors = [
     (231, 76, 60),
     (46, 204, 113),
@@ -30,44 +31,37 @@ colors = [
     (155, 89, 182),
     (241, 196, 15),
     (230, 126, 34),
-    (26, 188, 156), 
-    (149, 165, 166), 
+    (26, 188, 156),
+    (149, 165, 166),
     (236, 240, 241),
-    (44, 62, 80)      
+    (44, 62, 80)
 ]
-brushes = [5,10,15,20,25]
+brushes = [5, 10, 15, 20, 25]
 brush_flag = 0
 brush_size = brushes[brush_flag]
 color_flag = 0
 brush_color = colors[color_flag]
 last_color_change = 0
 
-# Track the state of drawing 
+# Track the state of drawing
 allow_draw = True
 
-while cam.isOpened():
-    ret, frame = cam.read() # Ret = return value that detects whether frame was successfully read or not
+# smoothing factor (higher -> smoother but more lag)
+SMOOTH_FACTOR = 4
 
-    # Skip if frame wasnt successfully read
+while cam.isOpened():
+    ret, frame = cam.read()
     if not ret:
         continue
 
-    # Flip the frame to avoid mirror effect
     frame = cv2.flip(frame, 1)
-
-    # Convert the frame to RGB format
     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-    # Draw the canvas, the same size of frame
     if canvas is None:
         canvas = np.zeros_like(frame)
 
-    # Process the frame to detect hands and face
     hand_results = hands.process(frame_rgb)
-    # face_results = face_mesh.process(frame_rgb)
 
-    # --------------------HANDS----------------------------------------
-    # Check if hands are detected
     if hand_results.multi_hand_landmarks:
         hand_landmarks = hand_results.multi_hand_landmarks[0]
         hand_handedness = hand_results.multi_handedness[0]
@@ -78,27 +72,30 @@ while cam.isOpened():
         index_tip = hand_landmarks.landmark[8]
         x, y = int(index_tip.x * w), int(index_tip.y * h)
 
-        # Draw with right hand
         if label == "Right":
+            # Initialize prev_x/prev_y on the first observation
+            if prev_x is None or prev_y is None:
+                prev_x, prev_y = x, y
+                prev_point = (x, y)
 
-            prev_x, prev_y = 0, 0
-            smooth_factor = 2
+            # Compute smoothed coordinates using previous raw coordinates
+            smooth_x = int(prev_x + (x - prev_x) / SMOOTH_FACTOR)
+            smooth_y = int(prev_y + (y - prev_y) / SMOOTH_FACTOR)
 
-            if abs(x - prev_x) < 2 and abs(y - prev_y) < 2:
-                continue
+            # Update drawing state: (original had `num_fingers_up != 1`)
+            # keep your original intent but consider: fist=0 to pause drawing.
+            allow_draw = (num_fingers_up != 1)
 
-            # Smoothing the coordinates
-            smooth_x = int(prev_x + (x - prev_x) / smooth_factor)
-            smooth_y = int(prev_y + (y - prev_y) / smooth_factor)
-
-            # Fist = pause drawing
-            allow_draw = num_fingers_up != 1
-
-            # Erase = 4 fingers
+            # Erase = 5 fingers (you used 5 before; keep if intended)
             if num_fingers_up == 5:
                 canvas = np.zeros_like(frame)
+                prev_point = None  # reset stroke
+                prev_x, prev_y = None, None
+                # skip drawing this frame
+                prev_x, prev_y = None, None
+                continue
 
-            # Color cycling
+            # Color cycling with cooldown
             current_time = time.time()
             if num_fingers_up == 4 and current_time - last_color_change > 0.5:
                 color_flag = (color_flag + 1) % len(colors)
@@ -109,33 +106,34 @@ while cam.isOpened():
                 brush_color = colors[color_flag]
                 last_color_change = current_time
 
-            # Drawing
-            if prev_point is not None and allow_draw:
-                cv2.line(canvas, prev_point, (smooth_x, smooth_y), brush_color, brush_size)
-            
-            
-            prev_point = (smooth_x, smooth_y)
-            prev_x, prev_y = smooth_x, smooth_y
+            # If starting a new stroke, set prev_point
+            if prev_point is None:
+                prev_point = (smooth_x, smooth_y)
 
-    # --------------------FACE--------------------------------------------
-    # Check if face are detected
-    # if face_results.multi_face_landmarks:
-    #     for face_landmarks in face_results.multi_face_landmarks:
-    #         mp_drawing.draw_landmarks(
-    #         frame, face_landmarks, mp_face_mesh.FACEMESH_TESSELATION,
-    #         mp_drawing.DrawingSpec(color=(0,255,0), thickness=1, circle_radius=1),
-    #         mp_drawing.DrawingSpec(color=(0,0,255), thickness=1))
+            # Draw line if allowed
+            if allow_draw and prev_point is not None:
+                # ensure brush size is integer
+                cv2.line(canvas, prev_point, (smooth_x, smooth_y), brush_color, int(brush_size))
+                prev_point = (smooth_x, smooth_y)
+            else:
+                # if not drawing, reset prev_point so next stroke starts cleanly
+                prev_point = None
 
-    # Overlay canvas on frame
+            # Save raw coordinates for smoothing next frame
+            prev_x, prev_y = x, y
+
+    else:
+        # No hand detected: reset prev_x/prev_y so smoothing doesn't jump later
+        prev_x, prev_y = None, None
+        prev_point = None
+
+    # Blend canvas over frame (add or weighted blend)
     frame = cv2.add(frame, canvas)
 
-    # Display the frame with hand + face landmarks
     cv2.imshow('Hand + Face Recognizations', canvas)
 
-    # Exit when 'q' is pressed
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
-# Release the video capture object and close the OpenCV windows
 cam.release()
 cv2.destroyAllWindows()
