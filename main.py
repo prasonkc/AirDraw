@@ -116,18 +116,6 @@ while cam.isOpened():
             
             prev_point = (smooth_x, smooth_y)
             prev_x, prev_y = smooth_x, smooth_y
-        elif label == "Left":
-            if num_fingers_up == 0:
-                brush_size = 1
-            elif num_fingers_up == 1:
-                brush_size = 5
-            elif num_fingers_up == 2:
-                brush_size = 10
-            elif num_fingers_up == 3:
-                brush_size = 20
-            elif num_fingers_up == 4:
-                brush_size = 30
-
 
     # --------------------FACE--------------------------------------------
     # Check if face are detected
