@@ -79,6 +79,9 @@ while cam.isOpened():
         prev_x, prev_y = 0, 0
         smooth_factor = 2
 
+        if abs(x - prev_x) < 2 and abs(y - prev_y) < 2:
+            continue
+
         # Smoothing the coordinates
         smooth_x = int(prev_x + (x - prev_x) / smooth_factor)
         smooth_y = int(prev_y + (y - prev_y) / smooth_factor)
